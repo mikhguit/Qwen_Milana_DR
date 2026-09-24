@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>С Днём Рождения, Милана! </title>
+<title>С Днём Рождения, Милана! 🎂</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -177,7 +177,7 @@
 </div>
 
 <div id="mobileHint">
-  <div>️ Стик: движение + вверх прыжок • 🔘 ПРЫГ</div>
+  <div>🕹️ Стик: движение + вверх прыжок • 🔘 ПРЫГ</div>
 </div>
 
 <div id="hint"></div>
@@ -188,7 +188,7 @@
   window.addEventListener('error',function(ev){
     var e=document.getElementById('err');
     e.style.display='block';
-    e.textContent=' '+(ev.message||'error')+'  @'+(ev.filename||'')+':'+(ev.lineno||0);
+    e.textContent='⚠ '+(ev.message||'error')+'  @'+(ev.filename||'')+':'+(ev.lineno||0);
   });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -201,6 +201,22 @@ if(!window.THREE){
   document.getElementById('err').textContent='⚠ Three.js не загрузился (нет сети / CDN недоступен).';
   throw new Error('THREE missing');
 }
+
+/* ========== ПОЗДРАВЛЕНИЯ ========== */
+const GREETINGS=[
+  'Милана, С Днём Рождения!',
+  'Поздравляем!',
+  'Мы тебя любим!',
+  'Ты Лучшая!',
+  'Милана — маленькая принцесса!',
+  'Ты Милашка-улыбашка!',
+  'Именинница ты наша!',
+  'С праздником, Милана!',
+  'Ты самая красивая!',
+  'Расти счастливая!',
+  'Милана — наше солнышко!',
+  'Обнимаем крепко!',
+];
 
 const touchInput={
   joystick:{active:false,id:null,startX:0,startY:0,dx:0,dy:0,magnitude:0,angle:0,jumpWasArmed:true},
@@ -456,6 +472,80 @@ function makeHeartFaceTex(){
   return t;
 }
 
+/* ========== ТЕКСТ НА ФОНЕ ========== */
+function makeGreetingTex(text,themeIdx){
+  const W=1024,H=160;
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  g.clearRect(0,0,W,H);
+  
+  // Цвета для разных уровней
+  const palettes=[
+    {fill:'#ffffff',stroke:'#e11d48',shadow:'rgba(225,29,72,.6)'}, // уровень 1 — белый с розовой обводкой
+    {fill:'#fef3c7',stroke:'#7c3aed',shadow:'rgba(124,58,237,.6)'}, // уровень 2 — кремовый с фиолетовой
+    {fill:'#ffffff',stroke:'#f59e0b',shadow:'rgba(245,158,11,.7)'}, // уровень 3 — белый с золотой
+  ];
+  const pal=palettes[themeIdx]||palettes[0];
+  
+  // Полупрозрачный фон-плашка
+  g.fillStyle='rgba(0,0,0,.25)';
+  g.beginPath();
+  if(g.roundRect)g.roundRect(20,20,W-40,H-40,40);
+  else g.rect(20,20,W-40,H-40);
+  g.fill();
+  g.strokeStyle='rgba(255,255,255,.5)';
+  g.lineWidth=4;
+  g.stroke();
+  
+  // Тень текста
+  g.shadowColor=pal.shadow;
+  g.shadowBlur=16;
+  g.shadowOffsetX=4;
+  g.shadowOffsetY=4;
+  
+  // Основной текст
+  g.font='900 72px "Nunito", Arial, sans-serif';
+  g.textAlign='center';
+  g.textBaseline='middle';
+  g.lineWidth=10;
+  g.strokeStyle=pal.stroke;
+  g.lineJoin='round';
+  g.strokeText(text,W/2,H/2);
+  g.fillStyle=pal.fill;
+  g.fillText(text,W/2,H/2);
+  
+  // Блик сверху
+  g.shadowColor='transparent';
+  g.globalAlpha=.3;
+  g.fillStyle='#ffffff';
+  g.fillText(text,W/2,H/2-4);
+  g.globalAlpha=1;
+  
+  const t=new THREE.CanvasTexture(c);
+  t.encoding=THREE.sRGBEncoding;
+  t.anisotropy=Math.min(4,MAX_ANISO);
+  return t;
+}
+
+function createFloatingText(text,x,y,z,themeIdx){
+  const tex=makeGreetingTex(text,themeIdx);
+  const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,depthWrite:false});
+  // Соотношение сторон 1024:160 = 6.4:1
+  const w=10,h=w/6.4;
+  const geo=new THREE.PlaneGeometry(w,h);
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.position.set(x,y,z);
+  mesh.userData={
+    baseY:y,
+    phase:rnd()*Math.PI*2,
+    speed:.3+rnd()*.4,
+    amp:.15+rnd()*.2,
+    rotSpeed:(rnd()-.5)*.3
+  };
+  LG.add(mesh);
+  return mesh;
+}
+
 const std=o=>new THREE.MeshStandardMaterial(Object.assign({roughness:.95,metalness:0},o));
 const vib=(c,e,flat)=>std({color:c,emissive:c,emissiveIntensity:(e===undefined?.2:e),flatShading:!!flat});
 const M={
@@ -513,7 +603,7 @@ let CHECKPOINTS=[2,90,148].map(t=>t*T);
 let currentLevel=1, enemySpeedMul=1;
 let flagMesh=null, birthdaySign=null;
 let totalHearts=0, heartsCollected=0;
-const solids=[],groundRanges=[],coins=[],enemies=[],pops=[],parts=[],clouds=[];
+const solids=[],groundRanges=[],coins=[],enemies=[],pops=[],parts=[],clouds=[],floatingTexts=[];
 function addSolid(x0,x1,y0,y1,kind,ref){
   const s={x0,x1,y0,y1,kind,ref:ref||null,used:false,bumpT:9,baseY:ref?ref.position.y:0};
   solids.push(s);return s;
@@ -523,15 +613,15 @@ const overGround=x=>groundRanges.some(r=>x>=r[0]&&x<=r[1]);
 const THEME_PINK={sky:['#fb7185','#fda4af','#fce7f3'],fog:0xfce7f3,hemiSky:0xffffff,hemiGnd:0x22c55e,
   sunC:0xfff0f5,sunI:1.2,cloud:0xffffff,cloudI:.4,
   grass:0x22c55e,grass2:0x16a34a,hillA:0x15803d,hillB:0x166534,bush:0x16a34a,dirt:0x451a03,
-  fillC:0xffd0e8,fillI:.35,stars:false,moon:false};
-const THEME_PURPLE={sky:['#a855f7','#c084fc','#e9d5ff'],fog:0xe9d5ff,hemiSky:0xffffff,hemiGnd:0x22c55e,
-  sunC:0xfff0ff,sunI:1.1,cloud:0xffffff,cloudI:.45,
+  fillC:0xffd0e8,fillI:.35,stars:false,moon:false,themeIdx:0};
+const THEME_PURPLE={sky:['#4c1d95','#7c3aed','#c4b5fd'],fog:0x4c1d95,hemiSky:0xc4b5fd,hemiGnd:0x1e1b4b,
+  sunC:0xfde68a,sunI:.9,cloud:0xe9d5ff,cloudI:.5,
   grass:0x22c55e,grass2:0x16a34a,hillA:0x15803d,hillB:0x166534,bush:0x16a34a,dirt:0x451a03,
-  fillC:0xe0b0ff,fillI:.35,stars:false,moon:false};
+  fillC:0x7c3aed,fillI:.3,stars:true,moon:true,themeIdx:1};
 const THEME_GOLD={sky:['#f59e0b','#fbbf24','#fef3c7'],fog:0xfef3c7,hemiSky:0xffffff,hemiGnd:0x22c55e,
   sunC:0xfff8e0,sunI:1.3,cloud:0xffffff,cloudI:.5,
   grass:0x22c55e,grass2:0x16a34a,hillA:0x15803d,hillB:0x166534,bush:0x16a34a,dirt:0x451a03,
-  fillC:0xfcd34d,fillI:.4,stars:false,moon:false};
+  fillC:0xfcd34d,fillI:.4,stars:false,moon:false,themeIdx:2};
 let curTheme=THEME_PINK;
 function makeSky(stops){
   const c=document.createElement('canvas');c.width=2;c.height=256;
@@ -555,6 +645,7 @@ function applyTheme(t){
   M.dirt.color.set(t.dirt);
 }
 
+/* ========== ДЕКОР С УНИКАЛЬНЫМИ ЭЛЕМЕНТАМИ ========== */
 function buildDecor(){
   const ic=new THREE.IcosahedronGeometry(1,2);
   for(let i=0;i<16;i++){
@@ -566,6 +657,7 @@ function buildDecor(){
     LG.add(g);clouds.push({g,sp:.22+rnd()*.4});
   }
   ic.dispose();
+  
   const dome=new THREE.SphereGeometry(1,12,8,0,Math.PI*2,0,Math.PI/2);
   for(let x=5*T;x<LEVEL_END;x+=(7+rnd()*8)*T){
     const s=2.5+rnd()*4,m=new THREE.Mesh(dome,rnd()<.5?M.hillA:M.hillB);
@@ -574,6 +666,7 @@ function buildDecor(){
       m2.scale.set(s2,s2*.6,s2*.8);m2.position.set(x+s*1.1,-.1,-4-rnd()*2);LG.add(m2);}
   }
   dome.dispose();
+  
   const ic2=new THREE.IcosahedronGeometry(1,2);
   for(let x=3*T;x<LEVEL_END-6;x+=(4+rnd()*9)*T){
     if(!overGround(x))continue;
@@ -583,6 +676,64 @@ function buildDecor(){
     g.position.set(x,0,-.85);LG.add(g);
   }
   ic2.dispose();
+  
+  // Уникальные элементы для каждого уровня
+  if(curTheme.themeIdx===0){
+    // Уровень 1: воздушные шарики
+    const balloonColors=[0xe11d48,0xfbbf24,0x3b82f6,0x22c55e,0xa855f7];
+    for(let i=0;i<12;i++){
+      const col=balloonColors[Math.floor(rnd()*balloonColors.length)];
+      const mat=new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.3});
+      const b=new THREE.Mesh(new THREE.SphereGeometry(.5,12,10),mat);
+      b.position.set(rnd()*LEVEL_END,10+rnd()*8,-10-rnd()*5);
+      LG.add(b);
+      // Ниточка
+      const string=new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,3,4),M.white);
+      string.position.set(b.position.x,b.position.y-2,b.position.z);
+      LG.add(string);
+    }
+  }else if(curTheme.themeIdx===1){
+    // Уровень 2: звёзды на небе
+    const N=60,pos=new Float32Array(N*3);
+    for(let i=0;i<N;i++){pos[i*3]=rnd()*LEVEL_END;pos[i*3+1]=12+rnd()*15;pos[i*3+2]=-15-rnd()*10;}
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const m=new THREE.PointsMaterial({color:0xfde68a,size:.5,fog:false});
+    LG.add(new THREE.Points(g,m));
+    // Луна
+    const moon=new THREE.Mesh(new THREE.SphereGeometry(3,16,12),
+      new THREE.MeshBasicMaterial({color:0xfde68a,fog:false}));
+    moon.position.set(LEVEL_END*.3,18,-25);LG.add(moon);
+    const halo=new THREE.Mesh(new THREE.SphereGeometry(4,16,12),
+      new THREE.MeshBasicMaterial({color:0xfde68a,transparent:true,opacity:.2,fog:false}));
+    halo.position.copy(moon.position);LG.add(halo);
+  }else{
+    // Уровень 3: конфетти/огоньки
+    for(let i=0;i<30;i++){
+      const col=[0xe11d48,0xfbbf24,0x3b82f6,0x22c55e,0xa855f7][Math.floor(rnd()*5)];
+      const mat=new THREE.MeshBasicMaterial({color:col});
+      const p=new THREE.Mesh(new THREE.SphereGeometry(.15,6,4),mat);
+      p.position.set(rnd()*LEVEL_END,5+rnd()*15,-8-rnd()*8);
+      LG.add(p);
+    }
+  }
+  
+  // ===== ПЛАВАЮЩИЕ НАДПИСИ-ПОЗДРАВЛЕНИЯ =====
+  floatingTexts.length=0;
+  const numTexts=5+Math.floor(rnd()*3); // 5-7 надписей
+  const usedPhrases=new Set();
+  for(let i=0;i<numTexts;i++){
+    let phrase;
+    do{phrase=GREETINGS[Math.floor(rnd()*GREETINGS.length)];}
+    while(usedPhrases.has(phrase) && usedPhrases.size<GREETINGS.length);
+    usedPhrases.add(phrase);
+    
+    const x=20+rnd()*(LEVEL_END-40);
+    const y=10+rnd()*8;
+    const z=-9-rnd()*3;
+    const mesh=createFloatingText(phrase,x,y,z,curTheme.themeIdx);
+    floatingTexts.push(mesh);
+  }
 }
 
 let segAlt=false;
@@ -801,6 +952,7 @@ function loadLevel(n){
   parts.forEach(p=>{p.live=false;p.m.visible=false;});
   disposeLevelGroup();
   solids.length=0;groundRanges.length=0;coins.length=0;enemies.length=0;clouds.length=0;
+  floatingTexts.length=0;
   seed = n===1?1337:(n===2?4242:9001);
   enemySpeedMul = n===1?1:(n===2?1.15:1.3);
   applyTheme(n===1?THEME_PINK:(n===2?THEME_PURPLE:THEME_GOLD));
@@ -819,26 +971,21 @@ function loadLevel(n){
 }
 
 /* ============================================================
-   МИЛАНА — яркая мультяшная модель с контрастными цветами
+   МИЛАНА — яркая мультяшная модель
    ============================================================ */
 const playerGroup=new THREE.Group();scene.add(playerGroup);
 const torso=new THREE.Group();torso.position.y=.62;playerGroup.add(torso);
 const PL={};
 
-// Ноги — тонкие цилиндры с белыми носочками и розовыми туфельками
 function buildLeg(zOff){
   const hip=new THREE.Group();hip.position.set(0,.65,zOff);playerGroup.add(hip);
-  // Бедро (розовое платье)
   const th=new THREE.Mesh(new THREE.CylinderGeometry(.10,.09,.20,12),M.dressPink);
   th.castShadow=true;hip.add(th);
   const knee=new THREE.Group();knee.position.y=-.20;hip.add(knee);
-  // Голень (белый носочек)
   const sh=new THREE.Mesh(new THREE.CylinderGeometry(.08,.07,.18,12),M.white);
   sh.castShadow=true;knee.add(sh);
-  // Туфелька-балетка (тёмно-розовая)
   const boot=new THREE.Mesh(new THREE.CylinderGeometry(.12,.14,.12,12),M.shoe);
   boot.position.set(.03,-.24,0);boot.castShadow=true;knee.add(boot);
-  // Бантик на туфельке
   const bow=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8),M.gold);
   bow.position.set(.03,-.24,.13);knee.add(bow);
   return {hip,knee};
@@ -846,14 +993,11 @@ function buildLeg(zOff){
 
 function buildArm(zOff){
   const sho=new THREE.Group();sho.position.set(0,.45,zOff);torso.add(sho);
-  // Рукав (розовый)
   const up=new THREE.Mesh(new THREE.CylinderGeometry(.08,.07,.18,12),M.dressPink);
   up.castShadow=true;sho.add(up);
   const elb=new THREE.Group();elb.position.y=-.18;sho.add(elb);
-  // Предплечье (кожа)
   const fo=new THREE.Mesh(new THREE.CylinderGeometry(.06,.05,.16,12),M.skin);
   fo.castShadow=true;elb.add(fo);
-  // Кисть
   const gl=new THREE.Mesh(new THREE.SphereGeometry(.08,12,10),M.skin);
   gl.position.y=-.22;gl.castShadow=true;elb.add(gl);
   return {sho,elb};
@@ -861,67 +1005,53 @@ function buildArm(zOff){
 
 PL.legL=buildLeg(-.12); PL.legR=buildLeg(.12);
 
-// ===== ПЫШНАЯ ЮБКА-КОНУС =====
-// Юбка — широкий конус с оборками
 const skirtGeo=new THREE.CylinderGeometry(.20,.60,.50,20,1,true);
 const skirt=new THREE.Mesh(skirtGeo,M.dressPink);
 skirt.position.set(0,.12,0);skirt.castShadow=true;torso.add(skirt);
 
-// Оборка на юбке (розовая лента)
 const ruffleGeo=new THREE.TorusGeometry(.55,.04,8,20);
 const ruffle=new THREE.Mesh(ruffleGeo,M.dressLight);
 ruffle.position.set(0,.12,0);ruffle.rotation.x=Math.PI/2;torso.add(ruffle);
 
-// Корсет (верх платья) — розовый цилиндр
 const bodiceGeo=new THREE.CylinderGeometry(.20,.20,.25,16);
 const bodice=new THREE.Mesh(bodiceGeo,M.dressPink);
 bodice.position.set(0,.48,0);bodice.castShadow=true;torso.add(bodice);
 
-// Золотой пояс
 const beltGeo=new THREE.CylinderGeometry(.22,.22,.06,16);
 const belt=new THREE.Mesh(beltGeo,M.gold);
 belt.position.set(0,.38,0);torso.add(belt);
 
-// Большой бант на поясе (спереди)
 const bowCenter=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),M.gold);
 bowCenter.position.set(0,.38,.24);torso.add(bowCenter);
 const bowL=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),M.gold);
 bowL.scale.set(1.3,.6,1);bowL.position.set(-.09,.38,.24);torso.add(bowL);
 const bowR=bowL.clone();bowR.position.x=.09;torso.add(bowR);
 
-// Рукава-фонарики (розовые сферы)
 const sleeveL=new THREE.Mesh(new THREE.SphereGeometry(.10,12,10),M.dressPink);
 sleeveL.position.set(.26,.52,-.11);sleeveL.castShadow=true;torso.add(sleeveL);
 const sleeveR=new THREE.Mesh(new THREE.SphereGeometry(.10,12,10),M.dressPink);
 sleeveR.position.set(.26,.52,.11);sleeveR.castShadow=true;torso.add(sleeveR);
 
-// Шея (кожа)
 const neck=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.08,12),M.skin);
 neck.position.set(0,.64,0);torso.add(neck);
 
 PL.armL=buildArm(-.26); PL.armR=buildArm(.26);
 
-// ===== ГОЛОВА С БОЛЬШИМИ ГЛАЗАМИ =====
 const head=new THREE.Group();head.position.set(0,.78,0);torso.add(head);PL.head=head;
 {
-  // Голова — большая сфера
   const skull=new THREE.Mesh(new THREE.SphereGeometry(.28,24,20),M.skin);
   skull.scale.set(1,1.08,1);skull.position.set(.02,.16,0);skull.castShadow=true;head.add(skull);
   
-  // Ушки
   [-1,1].forEach(s=>{
     const ear=new THREE.Mesh(new THREE.SphereGeometry(.06,10,8),M.skin);
     ear.position.set(-.05,.14,s*.26);head.add(ear);
-    // Серёжка-звёздочка
     const earring=new THREE.Mesh(new THREE.IcosahedronGeometry(.03,1),M.gold);
     earring.position.set(-.05,.10,s*.26);head.add(earring);
   });
   
-  // Носик (маленькая сфера)
   const nose=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),M.skin);
   nose.position.set(.26,.12,0);nose.castShadow=true;head.add(nose);
   
-  // Румянец на щёчках (яркий розовый)
   [-1,1].forEach(s=>{
     const blush=new THREE.Mesh(new THREE.CircleGeometry(.09,16),M.blush);
     blush.position.set(.22,.08,s*.18);
@@ -929,22 +1059,16 @@ const head=new THREE.Group();head.position.set(0,.78,0);torso.add(head);PL.head=
     head.add(blush);
   });
   
-  // БОЛЬШИЕ ГЛАЗА
   PL.eyes=[];
   [-1,1].forEach(s=>{
-    // Белок (большой)
     const w=new THREE.Mesh(new THREE.SphereGeometry(.09,14,12),M.eyeWhite);
     w.position.set(.18,.22,s*.10);head.add(w);
-    // Радужка (голубая, большая)
     const p=new THREE.Mesh(new THREE.SphereGeometry(.06,12,10),M.eyeBlue);
     p.position.set(.24,.22,s*.10);head.add(p);
-    // Зрачок (чёрный)
     const pupil=new THREE.Mesh(new THREE.SphereGeometry(.03,8,6),M.dark);
     pupil.position.set(.26,.22,s*.10);head.add(pupil);
-    // Блик (белый)
     const highlight=new THREE.Mesh(new THREE.SphereGeometry(.02,6,4),M.white);
     highlight.position.set(.25,.24,s*.09);head.add(highlight);
-    // Ресницы (тёмные)
     const lash=new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.10,6),M.lash);
     lash.position.set(.20,.30,s*.10);
     lash.rotation.z=s*-.15;
@@ -952,7 +1076,6 @@ const head=new THREE.Group();head.position.set(0,.78,0);torso.add(head);PL.head=
     PL.eyes.push(w,p,pupil);
   });
   
-  // Улыбка (розовая дуга)
   const smileCurve=new THREE.CatmullRomCurve3([
     new THREE.Vector3(.20,.02,-.07),
     new THREE.Vector3(.24,.01,0),
@@ -962,16 +1085,12 @@ const head=new THREE.Group();head.position.set(0,.78,0);torso.add(head);PL.head=
   const smile=new THREE.Mesh(smileGeo,M.lash);
   head.add(smile);
   
-  // ===== ВОЛОСЫ — длинные золотые =====
-  // Чёлка (спереди)
   const bangs=new THREE.Mesh(new THREE.SphereGeometry(.14,14,12),M.hair);
   bangs.scale.set(1.2,.5,1.3);bangs.position.set(.22,.28,0);head.add(bangs);
   
-  // Затылок (сзади)
   const backHair=new THREE.Mesh(new THREE.SphereGeometry(.20,16,14),M.hair);
   backHair.scale.set(1,1.3,1.1);backHair.position.set(-.10,.12,0);head.add(backHair);
   
-  // Боковые пряди (длинные)
   [-1,1].forEach(s=>{
     const strand=new THREE.Mesh(new THREE.CylinderGeometry(.07,.05,.35,12),M.hair);
     strand.position.set(.05,-.05,s*.24);
@@ -980,21 +1099,17 @@ const head=new THREE.Group();head.position.set(0,.78,0);torso.add(head);PL.head=
     head.add(strand);
   });
   
-  // Хвост сзади (длинный)
   const tail=new THREE.Mesh(new THREE.CylinderGeometry(.10,.06,.50,12),M.hair);
   tail.position.set(-.22,-.10,0);tail.rotation.z=.35;tail.castShadow=true;head.add(tail);
   
-  // Большой золотой бант на голове
-  const bowCenter=new THREE.Mesh(new THREE.SphereGeometry(.08,12,10),M.gold);
-  bowCenter.position.set(0,.42,0);head.add(bowCenter);
-  const bowL=new THREE.Mesh(new THREE.SphereGeometry(.10,12,10),M.gold);
-  bowL.scale.set(1.4,.7,1);bowL.position.set(-.10,.42,0);head.add(bowL);
-  const bowR=bowL.clone();bowR.position.x=.10;head.add(bowR);
+  const bowCenterHead=new THREE.Mesh(new THREE.SphereGeometry(.08,12,10),M.gold);
+  bowCenterHead.position.set(0,.42,0);head.add(bowCenterHead);
+  const bowLHead=new THREE.Mesh(new THREE.SphereGeometry(.10,12,10),M.gold);
+  bowLHead.scale.set(1.4,.7,1);bowLHead.position.set(-.10,.42,0);head.add(bowLHead);
+  const bowRHead=bowLHead.clone();bowRHead.position.x=.10;head.add(bowRHead);
   
-  // Корона (золотая с камнями)
   const crown=new THREE.Mesh(new THREE.ConeGeometry(.20,.30,8),M.gold);
   crown.position.set(0,.52,0);head.add(crown);
-  // Камни на короне
   [-1,0,1].forEach(i=>{
     const gem=new THREE.Mesh(new THREE.IcosahedronGeometry(.04,2),M.eyeBlue);
     gem.position.set(i*.09,.50,.17);head.add(gem);
@@ -1094,7 +1209,7 @@ function showModal(t,b,btn,action,showAchieve=false){
   
   const achBox=document.getElementById('achievementBox');
   if(showAchieve){
-    achBox.innerHTML='<div class="achievement"><div class="medal">🏆</div><div class="text">ВСЕ СЕРДЕЧКИ СОБРАНЫ!<br>+1000 ОЧКОВ</div></div>';
+    achBox.innerHTML='<div class="achievement"><div class="medal"></div><div class="text">ВСЕ СЕРДЕЧКИ СОБРАНЫ!<br>+1000 ОЧКОВ</div></div>';
     SFX.achieve();
   }else{
     achBox.innerHTML='';
@@ -1375,7 +1490,7 @@ function updateFlag(dt){
                   '<br><br>ОЧКИ '+pad(score,6),
                   'УРОВЕНЬ '+(currentLevel+1)+' ▶','next',gotAchievement);
       }else{
-        showModal(' С ДНЁМ РОЖДЕНИЯ, МИЛАНА! 🎉','БОНУС ВРЕМЕНИ '+timeBonus+
+        showModal('🎉 С ДНЁМ РОЖДЕНИЯ, МИЛАНА! ','БОНУС ВРЕМЕНИ '+timeBonus+
                   '<br><br>ИТОГО ОЧКИ '+pad(score,6)+
                   '<br>СЕРДЕЧКИ ×'+pad(coinCount,2),'ИГРАТЬ СНОВА','restart',gotAchievement);
       }
@@ -1402,6 +1517,22 @@ function updateClear(dt){
     birthdaySign.position.y=8+Math.sin(clockT*1.5)*.3;
   }
 }
+
+/* ========== ОБНОВЛЕНИЕ ПЛАВАЮЩИХ НАДПИСЕЙ ========== */
+function updateFloatingTexts(dt){
+  for(const mesh of floatingTexts){
+    const d=mesh.userData;
+    // Покачивание по Y
+    mesh.position.y=d.baseY+Math.sin(clockT*d.speed+d.phase)*d.amp;
+    // Лёгкое вращение
+    mesh.rotation.y+=d.rotSpeed*dt;
+    // Billboard — поворот к камере (только по Y)
+    const dx=camera.position.x-mesh.position.x;
+    const dz=camera.position.z-mesh.position.z;
+    mesh.rotation.y=Math.atan2(dx,dz);
+  }
+}
+
 function updateClouds(dt){
   for(const c of clouds){
     c.g.position.x-=c.sp*dt;
@@ -1480,6 +1611,7 @@ function frame(now){
     else if(state==='flag')updateFlag(dt);
     else if(state==='clear')updateClear(dt);
     updateBlocks(dt);updatePops(dt);updateParts(dt);updateClouds(dt);
+    updateFloatingTexts(dt);
     playerGroup.position.set(P.x,P.y-HH,0);
     posePlayer(dt);
   }
